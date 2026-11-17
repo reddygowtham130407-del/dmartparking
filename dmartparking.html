@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DMart Parking Dashboard</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      color: #17231b;
+      background: #f3f6f3;
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 28px 16px; }
+    main { max-width: 1040px; margin: 0 auto; }
+    header, .toolbar, .section-heading, .slot-top, .activity-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    header { margin-bottom: 22px; flex-wrap: wrap; }
+    h1 { margin: 0 0 5px; font-size: clamp(1.5rem, 4vw, 2rem); }
+    h2 { margin: 0; font-size: 1.1rem; }
+    p { margin: 0; color: #627066; }
+    .eyebrow { color: #176d34; font-size: .75rem; font-weight: 750; letter-spacing: .12em; text-transform: uppercase; }
+    .live { display: flex; align-items: center; gap: 8px; color: #27623a; font-size: .9rem; font-weight: 650; }
+    .live-dot { width: 9px; height: 9px; border-radius: 50%; background: #30a653; box-shadow: 0 0 0 4px #30a65320; }
+    .cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 18px; }
+    .card, .panel { background: white; border: 1px solid #e1e9e2; border-radius: 14px; box-shadow: 0 5px 20px #17351f08; }
+    .card { padding: 18px; }
+    .card-label { color: #637066; font-size: .85rem; }
+    .card-value { margin-top: 7px; font-size: 1.7rem; font-weight: 760; }
+    .card-detail { margin-top: 3px; color: #6a776d; font-size: .78rem; }
+    .green-text { color: #19723a; }
+    .red-text { color: #b3342c; }
+    .toolbar { justify-content: flex-start; flex-wrap: wrap; padding: 16px; margin-bottom: 18px; }
+    .toolbar label { display: flex; align-items: center; gap: 8px; color: #46534a; font-size: .88rem; font-weight: 600; }
+    select, input, button { font: inherit; }
+    select, input { min-height: 40px; padding: 8px 11px; color: #253329; background: white; border: 1px solid #d6dfd7; border-radius: 8px; }
+    input { width: min(230px, 100%); }
+    button { border: 0; border-radius: 8px; padding: 10px 14px; font-weight: 650; cursor: pointer; }
+    button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px solid #176d34; outline-offset: 2px; }
+    button:disabled { cursor: not-allowed; opacity: .48; }
+    .primary { color: white; background: #176d34; }
+    .secondary { color: #26352a; background: #e9eee9; }
+    .danger { color: #a12620; background: #fff0ef; }
+    .panel { padding: 20px; }
+    .section-heading { align-items: flex-start; margin-bottom: 16px; flex-wrap: wrap; }
+    .section-heading p { margin-top: 4px; font-size: .85rem; }
+    .availability { padding: 8px 12px; color: #17662c; background: #eaf7ed; border-radius: 8px; font-size: .88rem; font-weight: 700; }
+    .availability.full { color: #a12620; background: #fff0ef; }
+    .floor-label { margin-bottom: 10px; color: #56645a; font-size: .76rem; font-weight: 750; letter-spacing: .1em; }
+    .lot { padding: 16px; background: #edf1ee; border-radius: 12px; }
+    .aisle { margin: 0 0 14px; padding: 8px; border: 2px dashed #b5c0b7; border-radius: 7px; color: #667269; text-align: center; font-size: .75rem; letter-spacing: .13em; }
+    .slots { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 11px; }
+    .slot { min-height: 102px; padding: 11px; color: #145a28; text-align: left; background: #d7f3dd; border: 2px solid #64b879; transition: transform .15s, background .15s; }
+    .slot:hover { transform: translateY(-2px); }
+    .slot.occupied { color: #8c211c; background: #ffe0dd; border-color: #df6961; }
+    .slot-top { gap: 6px; font-size: .78rem; }
+    .vehicle-icon { font-size: 1.4rem; line-height: 1; }
+    .slot-name { display: block; margin-top: 9px; font-size: 1rem; }
+    .slot-state { display: block; margin-top: 2px; font-size: .75rem; font-weight: 500; }
+    .slot-time { display: block; margin-top: 5px; color: #6a625a; font-size: .68rem; }
+    .below { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 18px; }
+    .controls { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+    .controls label { display: grid; gap: 6px; color: #46534a; font-size: .82rem; font-weight: 600; }
+    .activity-list { display: grid; gap: 9px; max-height: 190px; overflow: auto; margin: 12px 0 0; padding: 0; list-style: none; }
+    .activity-list li { display: flex; justify-content: space-between; gap: 10px; padding-bottom: 8px; color: #47544a; border-bottom: 1px solid #edf0ed; font-size: .82rem; }
+    .activity-list time { flex-shrink: 0; color: #78847b; font-size: .73rem; }
+    .empty { color: #78847b !important; }
+    .notice { min-height: 22px; margin-top: 12px; color: #a12620; font-size: .84rem; }
+
+    @media (max-width: 700px) {
+      body { padding: 16px 10px; }
+      .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+      .card { padding: 14px; }
+      .panel { padding: 14px; }
+      .below { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 420px) {
+      .toolbar { align-items: stretch; }
+      .toolbar label { justify-content: space-between; width: 100%; }
+      .toolbar input { width: 58%; }
+      .slots { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <div class="eyebrow">DMart · Store operations</div>
+        <h1>Parking dashboard</h1>
+        <p>Live view of the parking lot and simulated vehicle activity</p>
+      </div>
+      <div class="live"><span class="live-dot"></span> Demo mode · Saved in this browser</div>
+    </header>
+
+    <section class="cards" aria-label="Parking statistics">
+      <article class="card">
+        <div class="card-label">Available</div>
+        <div class="card-value green-text" id="available-count">0</div>
+        <div class="card-detail">spaces ready to use</div>
+      </article>
+      <article class="card">
+        <div class="card-label">Occupied</div>
+        <div class="card-value red-text" id="occupied-count">0</div>
+        <div class="card-detail">vehicles parked</div>
+      </article>
+      <article class="card">
+        <div class="card-label">Total capacity</div>
+        <div class="card-value" id="total-count">0</div>
+        <div class="card-detail">configured spaces</div>
+      </article>
+      <article class="card">
+        <div class="card-label">Occupancy</div>
+        <div class="card-value" id="occupancy-percent">0%</div>
+        <div class="card-detail">of total capacity</div>
+      </article>
+    </section>
+
+    <section class="panel toolbar" aria-label="Parking filters">
+      <label for="status-filter">Show
+        <select id="status-filter">
+          <option value="all">All spaces</option>
+          <option value="available">Available</option>
+          <option value="occupied">Occupied</option>
+        </select>
+      </label>
+      <label for="slot-search">Find a space
+        <input id="slot-search" type="search" placeholder="Search, e.g. A1" autocomplete="off">
+      </label>
+      <button class="secondary" id="reset-button" type="button">Reset demo</button>
+    </section>
+
+    <section class="panel" aria-label="Parking lot layout">
+      <div class="section-heading">
+        <div>
+          <h2>Ground floor</h2>
+          <p>Choose any space to manually change its status.</p>
+        </div>
+        <div class="availability" id="availability" role="status" aria-live="polite"></div>
+      </div>
+      <div class="lot">
+        <div class="floor-label">ZONE A · MAIN ENTRANCE</div>
+        <div class="aisle">DRIVE AISLE</div>
+        <div class="slots" id="slots"></div>
+      </div>
+      <div class="notice" id="notice" role="status" aria-live="polite"></div>
+    </section>
+
+    <div class="below">
+      <section class="panel">
+        <div class="section-heading">
+          <div>
+            <h2>Vehicle entry / exit</h2>
+            <p>Simulate a vehicle arriving or leaving.</p>
+          </div>
+        </div>
+        <div class="controls">
+          <label for="vehicle-type">Vehicle type
+            <select id="vehicle-type">
+              <option value="Car">Car</option>
+              <option value="Bike">Bike</option>
+            </select>
+          </label>
+          <button class="primary" id="park-button" type="button">Park vehicle</button>
+          <button class="secondary" id="leave-button" type="button">Vehicle leaves</button>
+        </div>
+      </section>
+      <section class="panel">
+        <div class="activity-heading">
+          <div>
+            <h2>Recent activity</h2>
+            <p style="margin-top:4px;font-size:.85rem">Latest demo events</p>
+          </div>
+        </div>
+        <ul class="activity-list" id="activity-list"></ul>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const STORAGE_KEY = "dmart-parking-dashboard-v2";
+    const initialSlots = [
+      { id: "A1", zone: "A", type: "Car", occupied: false },
+      { id: "A2", zone: "A", type: "Car", occupied: true, vehicle: "Car", parkedAt: Date.now() - 18 * 60000 },
+      { id: "A3", zone: "A", type: "Bike", occupied: false },
+      { id: "A4", zone: "A", type: "Car", occupied: false },
+      { id: "B1", zone: "B", type: "Car", occupied: true, vehicle: "Car", parkedAt: Date.now() - 42 * 60000 },
+      { id: "B2", zone: "B", type: "Bike", occupied: false },
+      { id: "B3", zone: "B", type: "Car", occupied: true, vehicle: "Car", parkedAt: Date.now() - 9 * 60000 },
+      { id: "B4", zone: "B", type: "Car", occupied: false }
+    ];
+    const slotsElement = document.querySelector("#slots");
+    const availabilityElement = document.querySelector("#availability");
+    const parkButton = document.querySelector("#park-button");
+    const leaveButton = document.querySelector("#leave-button");
+    const noticeElement = document.querySelector("#notice");
+    const filterElement = document.querySelector("#status-filter");
+    const searchElement = document.querySelector("#slot-search");
+    let slots = loadSlots();
+    let activity = [];
+
+    function loadSlots() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (!saved) return initialSlots.map(slot => ({ ...slot }));
+        const parsed = JSON.parse(saved);
+        const valid = Array.isArray(parsed) &&
+          parsed.length === initialSlots.length &&
+          parsed.every((slot, index) =>
+            slot.id === initialSlots[index].id &&
+            typeof slot.occupied === "boolean" &&
+            slot.type === initialSlots[index].type
+          );
+        if (valid) return parsed;
+        noticeElement.textContent = "Saved parking data was invalid. Showing the demo layout.";
+      } catch {
+        noticeElement.textContent = "Saved parking data could not be accessed. Showing the demo layout.";
+      }
+      return initialSlots.map(slot => ({ ...slot }));
+    }
+
+    function saveSlots() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(slots));
+        noticeElement.textContent = "";
+      } catch (error) {
+        noticeElement.textContent = `Could not save changes in this browser: ${error.message}`;
+      }
+    }
+
+    function addActivity(message) {
+      activity.unshift({ message, time: new Date() });
+      activity = activity.slice(0, 12);
+      renderActivity();
+    }
+
+    function formatDuration(parkedAt) {
+      if (!parkedAt) return "";
+      const minutes = Math.max(0, Math.floor((Date.now() - parkedAt) / 60000));
+      if (minutes < 1) return "Parked just now";
+      if (minutes < 60) return `Parked ${minutes} min ago`;
+      const hours = Math.floor(minutes / 60);
+      const remainingMinutes = minutes % 60;
+      return `Parked ${hours}h ${remainingMinutes}m ago`;
+    }
+
+    function renderActivity() {
+      const list = document.querySelector("#activity-list");
+      if (activity.length === 0) {
+        list.innerHTML = '<li class="empty">No new activity yet.</li>';
+        return;
+      }
+      list.replaceChildren(...activity.map(event => {
+        const item = document.createElement("li");
+        const message = document.createElement("span");
+        const time = document.createElement("time");
+        message.textContent = event.message;
+        time.dateTime = event.time.toISOString();
+        time.textContent = event.time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        item.append(message, time);
+        return item;
+      }));
+    }
+
+    function render() {
+      const occupied = slots.filter(slot => slot.occupied).length;
+      const available = slots.length - occupied;
+      document.querySelector("#available-count").textContent = available;
+      document.querySelector("#occupied-count").textContent = occupied;
+      document.querySelector("#total-count").textContent = slots.length;
+      document.querySelector("#occupancy-percent").textContent = `${Math.round(occupied / slots.length * 100)}%`;
+      availabilityElement.textContent = available === 0 ? "Lot is full" : `${available} ${available === 1 ? "space" : "spaces"} available`;
+      availabilityElement.classList.toggle("full", available === 0);
+
+      const status = filterElement.value;
+      const search = searchElement.value.trim().toLowerCase();
+      const visibleSlots = slots.filter(slot =>
+        (status === "all" || (status === "available" ? !slot.occupied : slot.occupied)) &&
+        slot.id.toLowerCase().includes(search)
+      );
+      slotsElement.replaceChildren(...visibleSlots.map(slot => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `slot${slot.occupied ? " occupied" : ""}`;
+        button.setAttribute("aria-pressed", String(slot.occupied));
+        button.setAttribute("aria-label", `Slot ${slot.id}, ${slot.occupied ? "occupied by " + slot.vehicle : "available"}, ${slot.type} space. Click to change status.`);
+        const top = document.createElement("span");
+        top.className = "slot-top";
+        const vehicleIcon = document.createElement("span");
+        vehicleIcon.className = "vehicle-icon";
+        vehicleIcon.setAttribute("aria-hidden", "true");
+        vehicleIcon.textContent = slot.occupied ? (slot.vehicle === "Bike" ? "🏍️" : "🚗") : "＋";
+        const type = document.createElement("span");
+        type.textContent = `${slot.type} space`;
+        top.append(vehicleIcon, type);
+        const name = document.createElement("strong");
+        name.className = "slot-name";
+        name.textContent = slot.id;
+        const state = document.createElement("span");
+        state.className = "slot-state";
+        state.textContent = slot.occupied ? `Occupied · ${slot.vehicle}` : "Available";
+        button.append(top, name, state);
+        if (slot.occupied) {
+          const duration = document.createElement("span");
+          duration.className = "slot-time";
+          duration.textContent = formatDuration(slot.parkedAt);
+          button.append(duration);
+        }
+        button.addEventListener("click", () => toggleSlot(slot));
+        return button;
+      }));
+
+      parkButton.disabled = available === 0;
+      parkButton.title = available === 0 ? "No parking spaces are available" : "";
+      leaveButton.disabled = occupied === 0;
+      if (visibleSlots.length === 0) {
+        const empty = document.createElement("p");
+        empty.className = "empty";
+        empty.textContent = "No spaces match your search or filter.";
+        slotsElement.append(empty);
+      }
+    }
+
+    function toggleSlot(slot) {
+      if (slot.occupied) {
+        addActivity(`${slot.vehicle} left space ${slot.id}`);
+        slot.occupied = false;
+        delete slot.vehicle;
+        delete slot.parkedAt;
+      } else {
+        const vehicle = document.querySelector("#vehicle-type").value;
+        if (vehicle !== slot.type) {
+          noticeElement.textContent = `${slot.id} is reserved for ${slot.type.toLowerCase()}s.`;
+          return;
+        }
+        slot.occupied = true;
+        slot.vehicle = vehicle;
+        slot.parkedAt = Date.now();
+        addActivity(`${slot.vehicle} manually assigned to space ${slot.id}`);
+      }
+      saveSlots();
+      render();
+    }
+
+    parkButton.addEventListener("click", () => {
+      const vehicle = document.querySelector("#vehicle-type").value;
+      const next = slots.find(slot => !slot.occupied && slot.type === vehicle);
+      if (!next) {
+        noticeElement.textContent = `No available ${vehicle.toLowerCase()} spaces.`;
+        return;
+      }
+      next.occupied = true;
+      next.vehicle = vehicle;
+      next.parkedAt = Date.now();
+      addActivity(`${vehicle} parked in space ${next.id}`);
+      saveSlots();
+      render();
+    });
+
+    leaveButton.addEventListener("click", () => {
+      const next = slots.filter(slot => slot.occupied).sort((a, b) => a.parkedAt - b.parkedAt)[0];
+      if (!next) return;
+      addActivity(`${next.vehicle} left space ${next.id}`);
+      next.occupied = false;
+      delete next.vehicle;
+      delete next.parkedAt;
+      saveSlots();
+      render();
+    });
+
+    filterElement.addEventListener("change", render);
+    searchElement.addEventListener("input", render);
+
+    document.querySelector("#reset-button").addEventListener("click", () => {
+      slots = initialSlots.map(slot => ({ ...slot }));
+      activity = [];
+      filterElement.value = "all";
+      searchElement.value = "";
+      saveSlots();
+      renderActivity();
+      render();
+    });
+
+    renderActivity();
+    render();
+  </script>
+</body>
+</html>
